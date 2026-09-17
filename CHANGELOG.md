@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1-alpha4
+
+- Replaced the HTTPS Google startup page with a local offline home page.
+- Added an `Info` toolbar action for page diagnostics.
+- Diagnostics report current URL, document title, HTML/body character counts and the active User-Agent.
+- Added selectable User-Agent modes: system/iPad and legacy desktop Safari.
+- User-Agent choice is stored locally and applied on the next full app launch.
+- Added a direct `http://neverssl.com/` test link to the local home page.
+- Kept the alpha3 Legacy Gateway flow unchanged.
+
 ## 0.1-alpha3
 
 - Added Legacy Gateway flow for sites that fail on iOS 5.1.1 TLS/SSL.
