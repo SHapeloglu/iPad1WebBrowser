@@ -2,7 +2,7 @@
 
 Hafif web tarayıcı: **iPad 1 / iOS 5.1.1 / armv7 / non-ARC / Theos**.
 
-## v0.1-alpha1
+## v0.1-alpha3
 
 - `UIWebView` tabanlı tek-webview mimarisi
 - Adres / arama alanı
@@ -15,6 +15,9 @@ Hafif web tarayıcı: **iPad 1 / iOS 5.1.1 / armv7 / non-ARC / Theos**.
 - Tüm iPad yönleri
 - Suite çağrısı: `ipad1browser://open?url=<encoded-url>`
 - Direct dosya URL'lerinde, kuruluysa `iPad1Downloader` handoff denemesi
+- TLS/SSL hatalarında `Legacy Gateway ile Aç`
+- Gateway adresini cihazda yerel olarak saklama/değiştirme
+- `gateway/` altında Docker ile çalışabilen legacy web gateway servisi
 
 ## Platform sözleşmesi
 
@@ -50,6 +53,22 @@ make clean
 make package FINALPACKAGE=1
 ```
 
+## Legacy Gateway
+
+Eski iOS 5.1.1 TLS/sertifika altyapısının açamadığı halka açık sayfalar için tarayıcı hata ekranından Legacy Gateway kullanılabilir.
+
+Gateway adresi örneği:
+
+```text
+http://SUNUCU_IP:8091/proxy?token=UZUN_RASTGELE_TOKEN
+```
+
+Gateway kurulumu için `gateway/README.md` dosyasına bakın.
+
+**Güvenlik sınırı:** iPad ile gateway arasındaki bağlantı HTTP olduğundan giriş, parola, ödeme, kişisel veri veya hassas oturumlar için kullanılmamalıdır. Hedef kullanım halka açık/read-only web sayfalarıdır.
+
+Gateway modern JavaScript motoru sağlamaz. `LITE_MODE=1`, yoğun scriptleri kaldırarak eski WebKit'te içerik ağırlıklı sayfaları daha kullanılabilir hale getirmeyi hedefler.
+
 ## Downloader entegrasyonu
 
 Browser aşağıdaki sözleşmeyi **yalnızca scheme cihazda kayıtlıysa** çağırır:
@@ -62,11 +81,11 @@ Mevcut iPad1Downloader `Info.plist` içinde bu scheme henüz kayıtlı değil. B
 
 ## Eski web uyumluluğu
 
-Tarayıcı motoru iOS 5.1.1 WebKit olduğu için bazı modern siteler aşağıdaki nedenlerle çalışmayabilir:
+Tarayıcı motoru iOS 5.1.1 WebKit olduğu için bazı modern siteler aşağıdaki nedenlerle doğrudan çalışmayabilir:
 
 - yeni TLS / sertifika gereksinimleri
 - modern JavaScript özellikleri
 - yeni CSS özellikleri
 - güncel anti-bot / browser support politikaları
 
-Bu, tarayıcı UI'sından bağımsız işletim sistemi/WebKit sınırıdır.
+Legacy Gateway TLS tarafında yardımcı olabilir; modern JavaScript/WebKit sınırlarını tamamen ortadan kaldırmaz.
