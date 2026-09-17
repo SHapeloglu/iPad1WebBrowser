@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1-alpha6
+
+- Added persistent Yer İmleri (bookmarks) stored with `NSUserDefaults`.
+- Added persistent browsing history, capped at the most recent 50 unique URLs.
+- Added quick toolbar actions for Yer İmi and Geçmiş.
+- Added local Home links for Yer İmleri and Geçmiş with item counts.
+- Added bookmark removal and history clearing actions.
+- Page titles are stored together with URLs when available.
+- Kept the alpha5 legacy HTTP compatibility handling unchanged.
+
 ## 0.1-alpha5
 
 - Added legacy HTTP/1.1 compatibility handling for plain HTTP pages.
