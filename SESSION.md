@@ -24,6 +24,14 @@ Fiziksel iPad 1 / iOS 5.1.1 üzerinde:
 - `NeverSSL - Connecting ...` gibi geçici kayıtlar alpha8 filtrelemesiyle temizlenebiliyor
 - modern HTTPS sitelerinde iOS 5.1.1 TLS sınırı devam ediyor
 
+WSL / Theos tarafında:
+
+- `make clean` başarılı
+- `make package FINALPACKAGE=1` başarılı
+- `0.1.0~alpha8` paketi üretildi
+- iOS 5.0 hedefinin deprecated olduğuna dair linker uyarısı derlemeyi engellemiyor
+- `plutil / ply / libplist-utils` bulunmaması yalnızca plist optimizasyon uyarısı oluşturuyor
+
 ## Önemli bulgular
 
 ### 1. Paketleme
