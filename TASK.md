@@ -6,17 +6,22 @@
 
 ## Alpha9 testi
 
+- [x] Alpha9 fiziksel iPad 1 üzerinde çalıştırıldı ve NeverSSL açıldı.
 - [ ] NeverSSL ilk denemede timeout olursa kullanıcı müdahalesi olmadan otomatik ikinci istek başlıyor mu?
 - [ ] Otomatik retry sırasında adres çubuğunda gerçek HTTP URL korunuyor mu?
-- [ ] Retry başarılı olduğunda hata ekranı gösterilmeden sayfa açılıyor mu?
+- [x] Son alpha9 testinde görünür hata ekranı olmadan NeverSSL açıldı.
 - [ ] Retry de başarısız olursa yalnızca normal hata ekranı geliyor ve sonsuz retry oluşmuyor mu?
-- [ ] `Connection: close` + `Accept-Encoding: identity` davranışı korunuyor mu?
+- [ ] `Connection: close` + `Accept-Encoding: identity` davranışı tekrarlı testlerde korunuyor mu?
 - [ ] Geçmişte yalnızca nihai NeverSSL kaydı görünüyor mu?
 - [ ] `Connecting / Loading / Redirecting` gibi geçici başlıklar geçmişe girmiyor mu?
 - [ ] Aynı URL geçmişte gereksiz şekilde çoğalmıyor mu?
 - [ ] Yer İmi ekleme / silme davranışı bozulmadı mı?
 - [ ] Home -> HTTP test -> Home geçişi kararlı mı?
 - [ ] Uygulama kapatılıp açıldığında Yer İmleri ve Geçmiş korunuyor mu?
+
+## Son test sonucu
+
+Alpha9 kurulu fiziksel iPad 1 üzerinde NeverSSL başarıyla açıldı. Bu testte kullanıcıya `-1001` hata ekranı görünmedi. Retry'nin gerçekten tetiklendiğini uygulama arayüzü ayrıca göstermediği için, aynı test birkaç kez tekrar edilerek aralıklı timeout senaryosu gözlenmelidir.
 
 ## Derleme
 
@@ -53,4 +58,4 @@ killall SpringBoard
 
 ## Sonraki karar
 
-Alpha9 fiziksel cihazda kararlı kalırsa tekrar hata düzeltme yerine kullanım kolaylığı / arayüz geliştirmelerine geçilecek.
+Alpha9 fiziksel cihazda birkaç tekrarlı HTTP testinde kararlı kalırsa hata düzeltme aşamasından kullanım kolaylığı / arayüz geliştirmelerine geçilecek.
