@@ -1,10 +1,10 @@
 #import "HistoryBrowserViewController.h"
 
-static NSString * const IP1HistoryDefaultsKeyAlpha7 = @"IP1History";
-static NSUInteger const IP1HistoryMaxItemsAlpha7 = 50;
-static NSTimeInterval const IP1HistoryCommitDelay = 2.5;
+static NSString * const IP1HistoryDefaultsKeyAlpha8 = @"IP1History";
+static NSUInteger const IP1HistoryMaxItemsAlpha8 = 50;
+static NSTimeInterval const IP1HistoryCommitDelayAlpha8 = 2.5;
 
-@interface LegacyBrowserViewController (Alpha7Hooks)
+@interface LegacyBrowserViewController (Alpha8Hooks)
 - (void)loadHome;
 - (void)showHistoryPage;
 @end
@@ -13,9 +13,92 @@ static NSTimeInterval const IP1HistoryCommitDelay = 2.5;
 - (void)scheduleHistoryURL:(NSString *)url title:(NSString *)title;
 - (void)commitPendingHistory;
 - (void)captureInheritedDiagnosticsForWebView:(UIWebView *)webView;
+- (BOOL)isTransientHistoryTitle:(NSString *)title;
+- (void)cleanupStoredTransientHistory;
+- (void)clearPendingHistory;
 @end
 
 @implementation HistoryBrowserViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self cleanupStoredTransientHistory];
+}
+
+- (BOOL)isTransientHistoryTitle:(NSString *)title {
+    if ([title length] == 0) {
+        return NO;
+    }
+
+    NSString *lower = [title lowercaseString];
+    static NSArray *markers = nil;
+    if (markers == nil) {
+        markers = [[NSArray alloc] initWithObjects:
+                   @"connecting",
+                   @"redirecting",
+                   @"loading",
+                   @"please wait",
+                   @"just a moment",
+                   @"bağlanıyor",
+                   @"baglaniyor",
+                   @"yönlendiriliyor",
+                   @"yonlendiriliyor",
+                   @"yükleniyor",
+                   @"yukleniyor",
+                   @"lütfen bekleyin",
+                   @"lutfen bekleyin",
+                   nil];
+    }
+
+    NSEnumerator *enumerator = [markers objectEnumerator];
+    NSString *marker = nil;
+    while ((marker = [enumerator nextObject]) != nil) {
+        if ([lower rangeOfString:marker].location != NSNotFound) {
+            return YES;
+        }
+    }
+
+    return NO;
+}
+
+- (void)clearPendingHistory {
+    [NSObject cancelPreviousPerformRequestsWithTarget:self
+                                             selector:@selector(commitPendingHistory)
+                                               object:nil];
+
+    [_pendingHistoryURL release];
+    _pendingHistoryURL = nil;
+
+    [_pendingHistoryTitle release];
+    _pendingHistoryTitle = nil;
+}
+
+- (void)cleanupStoredTransientHistory {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSArray *stored = [defaults arrayForKey:IP1HistoryDefaultsKeyAlpha8];
+    if ([stored count] == 0) {
+        return;
+    }
+
+    NSMutableArray *cleaned = [NSMutableArray arrayWithCapacity:[stored count]];
+    NSEnumerator *enumerator = [stored objectEnumerator];
+    NSDictionary *entry = nil;
+    BOOL changed = NO;
+
+    while ((entry = [enumerator nextObject]) != nil) {
+        NSString *title = [entry objectForKey:@"title"];
+        if ([self isTransientHistoryTitle:title]) {
+            changed = YES;
+            continue;
+        }
+        [cleaned addObject:entry];
+    }
+
+    if (changed) {
+        [defaults setObject:cleaned forKey:IP1HistoryDefaultsKeyAlpha8];
+        [defaults synchronize];
+    }
+}
 
 - (void)webViewDidStartLoad:(UIWebView *)webView {
     [NSObject cancelPreviousPerformRequestsWithTarget:self
@@ -77,14 +160,17 @@ static NSTimeInterval const IP1HistoryCommitDelay = 2.5;
 }
 
 - (void)webView:(UIWebView *)webView didFailLoadWithError:(NSError *)error {
-    [NSObject cancelPreviousPerformRequestsWithTarget:self
-                                             selector:@selector(commitPendingHistory)
-                                               object:nil];
+    [self clearPendingHistory];
     [super webView:webView didFailLoadWithError:error];
 }
 
 - (void)scheduleHistoryURL:(NSString *)url title:(NSString *)title {
     if ([url length] == 0) {
+        return;
+    }
+
+    if ([self isTransientHistoryTitle:title]) {
+        [self clearPendingHistory];
         return;
     }
 
@@ -104,7 +190,7 @@ static NSTimeInterval const IP1HistoryCommitDelay = 2.5;
 
     [self performSelector:@selector(commitPendingHistory)
                withObject:nil
-               afterDelay:IP1HistoryCommitDelay];
+               afterDelay:IP1HistoryCommitDelayAlpha8];
 }
 
 - (void)commitPendingHistory {
@@ -116,8 +202,13 @@ static NSTimeInterval const IP1HistoryCommitDelay = 2.5;
         return;
     }
 
+    if ([self isTransientHistoryTitle:_pendingHistoryTitle]) {
+        [self clearPendingHistory];
+        return;
+    }
+
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    NSArray *stored = [defaults arrayForKey:IP1HistoryDefaultsKeyAlpha7];
+    NSArray *stored = [defaults arrayForKey:IP1HistoryDefaultsKeyAlpha8];
     NSMutableArray *items = [NSMutableArray arrayWithArray:(stored != nil ? stored : [NSArray array])];
 
     NSInteger index = (NSInteger)[items count] - 1;
@@ -135,27 +226,32 @@ static NSTimeInterval const IP1HistoryCommitDelay = 2.5;
                            nil];
     [items insertObject:entry atIndex:0];
 
-    while ([items count] > IP1HistoryMaxItemsAlpha7) {
+    while ([items count] > IP1HistoryMaxItemsAlpha8) {
         [items removeLastObject];
     }
 
-    [defaults setObject:items forKey:IP1HistoryDefaultsKeyAlpha7];
+    [defaults setObject:items forKey:IP1HistoryDefaultsKeyAlpha8];
     [defaults synchronize];
 
-    [_pendingHistoryURL release];
-    _pendingHistoryURL = nil;
-
-    [_pendingHistoryTitle release];
-    _pendingHistoryTitle = nil;
+    [self clearPendingHistory];
 }
 
 - (void)loadHome {
-    [self commitPendingHistory];
+    if (![self isTransientHistoryTitle:_pendingHistoryTitle]) {
+        [self commitPendingHistory];
+    } else {
+        [self clearPendingHistory];
+    }
     [super loadHome];
 }
 
 - (void)showHistoryPage {
-    [self commitPendingHistory];
+    if (![self isTransientHistoryTitle:_pendingHistoryTitle]) {
+        [self commitPendingHistory];
+    } else {
+        [self clearPendingHistory];
+    }
+    [self cleanupStoredTransientHistory];
     [super showHistoryPage];
 }
 
