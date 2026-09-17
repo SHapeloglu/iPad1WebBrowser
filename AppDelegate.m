@@ -1,5 +1,5 @@
 #import "AppDelegate.h"
-#import "HistoryBrowserViewController.h"
+#import "RetryBrowserViewController.h"
 
 static NSString * const IP1UserAgentModeDefaultsKey = @"IP1UserAgentMode";
 static NSString * const IP1DesktopUserAgent = @"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/534.50.2 (KHTML, like Gecko) Version/5.0 Safari/534.50.2";
@@ -21,7 +21,7 @@ static NSString * const IP1DesktopUserAgent = @"Mozilla/5.0 (Macintosh; Intel Ma
 
     self.window = [[[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]] autorelease];
 
-    self.browserViewController = [[[HistoryBrowserViewController alloc] init] autorelease];
+    self.browserViewController = [[[RetryBrowserViewController alloc] init] autorelease];
     self.window.rootViewController = self.browserViewController;
     [self.window makeKeyAndVisible];
 
