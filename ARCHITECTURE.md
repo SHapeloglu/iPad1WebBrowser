@@ -23,6 +23,8 @@ UIApplication
    |
 AppDelegate
    |
+RetryBrowserViewController
+   |
 HistoryBrowserViewController
    |
 LegacyBrowserViewController
@@ -80,6 +82,24 @@ Just a moment
 ```
 
 Türkçe karşılıkları da filtrelenir.
+
+### RetryBrowserViewController
+
+Plain HTTP tarafındaki aralıklı `NSURLErrorTimedOut (-1001)` hataları için en üst uyumluluk katmanıdır.
+
+Kurallar:
+
+- yalnızca `http://` isteklerinde devreye girer
+- yalnızca `-1001` timeout için otomatik retry yapar
+- aynı başarısız URL için en fazla bir otomatik retry uygular
+- retry isteğinde `Connection: close` korunur
+- retry isteğinde `Accept-Encoding: identity` korunur
+- cache bypass edilir
+- retry timeout süresi 45 saniyedir
+- ikinci deneme de başarısız olursa normal hata ekranı gösterilir
+- HTTPS/TLS hatalarını bypass etmez
+
+Bu katmanın amacı eski CFNetwork davranışına karşı dayanıklılık sağlamaktır; genel amaçlı sınırsız yeniden deneme mekanizması değildir.
 
 ## Veri saklama
 
@@ -144,7 +164,7 @@ Paket sürümü `control` dosyasında tutulur.
 Örnek:
 
 ```text
-0.1.0~alpha8
+0.1.0~alpha9
 ```
 
 Her davranış değişikliği `CHANGELOG.md` içine eklenmelidir.
