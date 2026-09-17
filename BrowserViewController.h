@@ -1,6 +1,6 @@
 #import <UIKit/UIKit.h>
 
-@interface BrowserViewController : UIViewController <UIWebViewDelegate, UITextFieldDelegate> {
+@interface BrowserViewController : UIViewController <UIWebViewDelegate, UITextFieldDelegate, UIAlertViewDelegate> {
     UIView *_addressBar;
     UITextField *_addressField;
     UIWebView *_webView;
@@ -12,6 +12,7 @@
     UIBarButtonItem *_stopButton;
     UIBarButtonItem *_homeButton;
 
+    NSString *_pendingLegacyURL;
     BOOL _initialPageLoaded;
 }
 
