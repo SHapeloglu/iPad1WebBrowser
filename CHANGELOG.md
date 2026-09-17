@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1-alpha9
+
+- Added a dedicated `RetryBrowserViewController` above the existing history and legacy compatibility layers.
+- Plain HTTP requests that fail with `NSURLErrorTimedOut` (`-1001`) are retried automatically once.
+- Automatic retry keeps `Connection: close` and `Accept-Encoding: identity` and bypasses the local cache.
+- Retry timeout is 45 seconds and is limited to one retry for the same failed URL to avoid loops.
+- If the retry also fails, the existing error page is shown normally.
+- HTTPS failures are not automatically retried by this compatibility path.
+
 ## 0.1-alpha8
 
 - Added transient-page filtering for history entries.
