@@ -1,5 +1,8 @@
 #import "AppDelegate.h"
-#import "BrowserViewController.h"
+#import "LegacyBrowserViewController.h"
+
+static NSString * const IP1UserAgentModeDefaultsKey = @"IP1UserAgentMode";
+static NSString * const IP1DesktopUserAgent = @"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/534.50.2 (KHTML, like Gecko) Version/5.0 Safari/534.50.2";
 
 @implementation AppDelegate
 
@@ -7,9 +10,18 @@
 @synthesize browserViewController = _browserViewController;
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSString *mode = [defaults stringForKey:IP1UserAgentModeDefaultsKey];
+    if ([mode isEqualToString:@"desktop"]) {
+        [defaults setObject:IP1DesktopUserAgent forKey:@"UserAgent"];
+    } else {
+        [defaults removeObjectForKey:@"UserAgent"];
+    }
+    [defaults synchronize];
+
     self.window = [[[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]] autorelease];
 
-    self.browserViewController = [[[BrowserViewController alloc] init] autorelease];
+    self.browserViewController = [[[LegacyBrowserViewController alloc] init] autorelease];
     self.window.rootViewController = self.browserViewController;
     [self.window makeKeyAndVisible];
 
