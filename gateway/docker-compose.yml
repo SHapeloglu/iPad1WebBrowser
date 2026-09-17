@@ -4,9 +4,9 @@ services:
     container_name: ipad1-legacy-gateway
     restart: unless-stopped
     ports:
-      - "8091:8091"
+      - "${GATEWAY_PORT:-8091}:8091"
     environment:
-      GATEWAY_TOKEN: "CHANGE_ME_WITH_A_LONG_RANDOM_TOKEN"
-      ALLOWED_HOSTS: "bidanismanlik.com,www.bidanismanlik.com"
-      LITE_MODE: "1"
-      MAX_RESPONSE_MB: "15"
+      GATEWAY_TOKEN: "${GATEWAY_TOKEN}"
+      ALLOWED_HOSTS: "${ALLOWED_HOSTS:-bidanismanlik.com,www.bidanismanlik.com}"
+      LITE_MODE: "${LITE_MODE:-1}"
+      MAX_RESPONSE_MB: "${MAX_RESPONSE_MB:-15}"
