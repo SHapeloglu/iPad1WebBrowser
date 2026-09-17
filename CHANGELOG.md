@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1-alpha7
+
+- Added redirect-aware history recording.
+- Successful pages are held briefly before being committed so intermediate redirect/loading pages do not immediately create history entries.
+- A new navigation cancels the pending history write and replaces it with the latest completed page.
+- Opening Home or Geçmiş commits the latest settled page immediately.
+- Exact duplicate URLs are still moved to the top instead of creating duplicate entries.
+- Kept alpha6 bookmarks and alpha5 HTTP compatibility behavior unchanged.
+
 ## 0.1-alpha6
 
 - Added persistent Yer İmleri (bookmarks) stored with `NSUserDefaults`.
