@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1-alpha5
+
+- Added legacy HTTP/1.1 compatibility handling for plain HTTP pages.
+- Reissues HTTP navigation with `Connection: close` and `Accept-Encoding: identity`.
+- Added an internal compatibility marker header to avoid reload loops.
+- Expanded diagnostics with requested URL, current document URL, loading state, last successful URL and last load error.
+- Confirmed on-device that `curl` can retrieve NeverSSL when the connection is explicitly closed, isolating the earlier white-page behavior to legacy CFNetwork/UIWebView connection handling.
+
 ## 0.1-alpha4
 
 - Replaced the HTTPS Google startup page with a local offline home page.
