@@ -2,6 +2,8 @@
 
 static NSString * const IP1HomeURLString = @"https://www.google.com/";
 static NSString * const IP1DownloaderScheme = @"ipad1downloader";
+static NSString * const IP1LegacyGatewayDefaultsKey = @"IP1LegacyGatewayBaseURL";
+static NSInteger const IP1LegacyGatewayAlertTag = 3001;
 
 @interface BrowserViewController ()
 - (void)loadHome;
@@ -12,6 +14,11 @@ static NSString * const IP1DownloaderScheme = @"ipad1downloader";
 - (BOOL)isLikelyDownloadURL:(NSURL *)url;
 - (BOOL)tryHandoffDownloadURL:(NSURL *)url;
 - (NSString *)queryValueForKey:(NSString *)key URL:(NSURL *)url;
+- (NSString *)percentEscapeQueryValue:(NSString *)value;
+- (NSString *)HTMLSafeString:(NSString *)value;
+- (NSString *)legacyGatewayBaseURLString;
+- (void)openThroughLegacyGateway:(NSString *)target;
+- (void)promptForLegacyGatewayWithTarget:(NSString *)target;
 @end
 
 @implementation BrowserViewController
@@ -120,6 +127,7 @@ static NSString * const IP1DownloaderScheme = @"ipad1downloader";
         return;
     }
 
+    _addressField.text = [url absoluteString];
     NSURLRequest *request = [NSURLRequest requestWithURL:url
                                              cachePolicy:NSURLRequestUseProtocolCachePolicy
                                          timeoutInterval:30.0];
@@ -149,7 +157,7 @@ static NSString * const IP1DownloaderScheme = @"ipad1downloader";
         return [NSURL URLWithString:[urlString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
     }
 
-    NSString *escaped = [trimmed stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+    NSString *escaped = [self percentEscapeQueryValue:trimmed];
     NSString *searchURL = [NSString stringWithFormat:@"https://www.google.com/search?q=%@", escaped];
     return [NSURL URLWithString:searchURL];
 }
@@ -170,7 +178,8 @@ static NSString * const IP1DownloaderScheme = @"ipad1downloader";
              [scheme isEqualToString:@"https"] ||
              [scheme isEqualToString:@"file"] ||
              [scheme isEqualToString:@"about"] ||
-             [scheme isEqualToString:@"data"]);
+             [scheme isEqualToString:@"data"] ||
+             [scheme isEqualToString:@"ipad1browser"]);
 }
 
 - (BOOL)isLikelyDownloadURL:(NSURL *)url {
@@ -200,7 +209,7 @@ static NSString * const IP1DownloaderScheme = @"ipad1downloader";
 
 - (BOOL)tryHandoffDownloadURL:(NSURL *)url {
     NSString *absolute = [url absoluteString];
-    NSString *escaped = [absolute stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+    NSString *escaped = [self percentEscapeQueryValue:absolute];
     NSString *handoffString = [NSString stringWithFormat:@"%@://download?url=%@", IP1DownloaderScheme, escaped];
     NSURL *handoffURL = [NSURL URLWithString:handoffString];
 
@@ -218,6 +227,11 @@ shouldStartLoadWithRequest:(NSURLRequest *)request
     NSURL *url = [request URL];
     if (url == nil) {
         return YES;
+    }
+
+    if ([[[url scheme] lowercaseString] isEqualToString:@"ipad1browser"]) {
+        [self handleSuiteURL:url];
+        return NO;
     }
 
     if ([self isExternalSchemeURL:url]) {
@@ -244,7 +258,10 @@ shouldStartLoadWithRequest:(NSURLRequest *)request
 - (void)webViewDidFinishLoad:(UIWebView *)webView {
     NSURL *url = [[[webView request] URL] retain];
     if (url != nil) {
-        _addressField.text = [url absoluteString];
+        NSString *scheme = [[url scheme] lowercaseString];
+        if (!([scheme isEqualToString:@"about"] && [_addressField.text length] > 0)) {
+            _addressField.text = [url absoluteString];
+        }
     }
     [url release];
     [self updateNavigationState];
@@ -257,17 +274,34 @@ shouldStartLoadWithRequest:(NSURLRequest *)request
 
     [self updateNavigationState];
 
-    NSString *escapedDescription = [[error localizedDescription]
-                                    stringByReplacingOccurrencesOfString:@"&" withString:@"&amp;"];
-    escapedDescription = [escapedDescription stringByReplacingOccurrencesOfString:@"<" withString:@"&lt;"];
-    escapedDescription = [escapedDescription stringByReplacingOccurrencesOfString:@">" withString:@"&gt;"];
+    NSURL *failedURL = [[webView request] URL];
+    NSString *target = [failedURL absoluteString];
+    if ([target length] == 0 || [[failedURL scheme] isEqualToString:@"about"]) {
+        target = _addressField.text;
+    }
+    if ([target length] > 0) {
+        _addressField.text = target;
+    }
+
+    NSString *escapedDescription = [self HTMLSafeString:[error localizedDescription]];
+    NSString *gatewayBlock = @"";
+    NSURL *targetURL = [NSURL URLWithString:target];
+    NSString *targetScheme = [[targetURL scheme] lowercaseString];
+    if ([target length] > 0 && ([targetScheme isEqualToString:@"http"] || [targetScheme isEqualToString:@"https"])) {
+        NSString *escapedTarget = [self percentEscapeQueryValue:target];
+        gatewayBlock = [NSString stringWithFormat:
+            @"<p><a style='display:inline-block;padding:10px 14px;background:#ddd;border:1px solid #aaa;text-decoration:none;color:#111' href='ipad1browser://legacy?url=%@'>Legacy Gateway ile Aç</a></p>"
+             "<p><a href='ipad1browser://gatewaySettings'>Gateway adresini ayarla/değiştir</a></p>", escapedTarget];
+    }
 
     NSString *html = [NSString stringWithFormat:
         @"<html><head><meta name='viewport' content='width=device-width'/></head>"
          "<body style='font-family:Helvetica;padding:24px'>"
          "<h2>Sayfa açılamadı</h2><p>%@</p>"
-         "<p><small>iOS 5.1.1 modern TLS, sertifika ve JavaScript kullanan bazı siteleri açamayabilir.</small></p>"
-         "</body></html>", escapedDescription];
+         "<p><small>Hata kodu: %ld. iOS 5.1.1 bazı modern TLS, sertifika ve JavaScript yapılarını desteklemez.</small></p>"
+         "%@"
+         "<p><small>Legacy Gateway yalnızca halka açık/read-only sayfalar için önerilir. Giriş, parola veya hassas veri kullanmayın.</small></p>"
+         "</body></html>", escapedDescription, (long)[error code], gatewayBlock];
     [webView loadHTMLString:html baseURL:nil];
 }
 
@@ -275,6 +309,31 @@ shouldStartLoadWithRequest:(NSURLRequest *)request
     _backButton.enabled = [_webView canGoBack];
     _forwardButton.enabled = [_webView canGoForward];
     _stopButton.enabled = [_webView isLoading];
+}
+
+- (NSString *)percentEscapeQueryValue:(NSString *)value {
+    if (value == nil) {
+        return @"";
+    }
+
+    CFStringRef escaped = CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
+                                                                  (CFStringRef)value,
+                                                                  NULL,
+                                                                  CFSTR(":/?#[]@!$&'()*+,;="),
+                                                                  kCFStringEncodingUTF8);
+    return [(NSString *)escaped autorelease];
+}
+
+- (NSString *)HTMLSafeString:(NSString *)value {
+    if (value == nil) {
+        return @"";
+    }
+
+    NSString *result = [value stringByReplacingOccurrencesOfString:@"&" withString:@"&amp;"];
+    result = [result stringByReplacingOccurrencesOfString:@"<" withString:@"&lt;"];
+    result = [result stringByReplacingOccurrencesOfString:@">" withString:@"&gt;"];
+    result = [result stringByReplacingOccurrencesOfString:@"\"" withString:@"&quot;"];
+    return result;
 }
 
 - (NSString *)queryValueForKey:(NSString *)key URL:(NSURL *)url {
@@ -308,29 +367,134 @@ shouldStartLoadWithRequest:(NSURLRequest *)request
     return nil;
 }
 
+- (NSString *)legacyGatewayBaseURLString {
+    NSString *value = [[NSUserDefaults standardUserDefaults] stringForKey:IP1LegacyGatewayDefaultsKey];
+    return [value stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+}
+
+- (void)openThroughLegacyGateway:(NSString *)target {
+    if ([target length] == 0) {
+        return;
+    }
+
+    NSString *base = [self legacyGatewayBaseURLString];
+    if ([base length] == 0) {
+        [self promptForLegacyGatewayWithTarget:target];
+        return;
+    }
+
+    NSString *separator = @"?";
+    if ([base rangeOfString:@"?"].location != NSNotFound) {
+        if ([base hasSuffix:@"?"] || [base hasSuffix:@"&"]) {
+            separator = @"";
+        } else {
+            separator = @"&";
+        }
+    }
+
+    NSString *escapedTarget = [self percentEscapeQueryValue:target];
+    NSString *gatewayURLString = [NSString stringWithFormat:@"%@%@url=%@", base, separator, escapedTarget];
+    NSURL *gatewayURL = [NSURL URLWithString:gatewayURLString];
+    if (gatewayURL == nil) {
+        return;
+    }
+
+    _addressField.text = target;
+    NSURLRequest *request = [NSURLRequest requestWithURL:gatewayURL
+                                             cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
+                                         timeoutInterval:45.0];
+    [_webView loadRequest:request];
+}
+
+- (void)promptForLegacyGatewayWithTarget:(NSString *)target {
+    [_pendingLegacyURL release];
+    _pendingLegacyURL = [target copy];
+
+    UIAlertView *alert = [[[UIAlertView alloc] initWithTitle:@"Legacy Gateway"
+                                                    message:@"Contabo gateway adresini girin. Örnek: http://SUNUCU_IP:8091/proxy?token=...\n\nHTTP şifreli değildir; yalnızca halka açık sayfalarda kullanın."
+                                                   delegate:self
+                                          cancelButtonTitle:@"Vazgeç"
+                                          otherButtonTitles:@"Kaydet", nil] autorelease];
+    alert.tag = IP1LegacyGatewayAlertTag;
+    alert.alertViewStyle = UIAlertViewStylePlainTextInput;
+    UITextField *field = [alert textFieldAtIndex:0];
+    field.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    field.autocorrectionType = UITextAutocorrectionTypeNo;
+    field.keyboardType = UIKeyboardTypeURL;
+    NSString *existing = [self legacyGatewayBaseURLString];
+    if ([existing length] > 0) {
+        field.text = existing;
+    } else {
+        field.placeholder = @"http://SUNUCU_IP:8091/proxy?token=...";
+    }
+    [alert show];
+}
+
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
+    if (alertView.tag != IP1LegacyGatewayAlertTag || buttonIndex == alertView.cancelButtonIndex) {
+        return;
+    }
+
+    NSString *value = [[[alertView textFieldAtIndex:0] text]
+                       stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if (![value hasPrefix:@"http://"]) {
+        UIAlertView *warning = [[[UIAlertView alloc] initWithTitle:@"Geçersiz Gateway"
+                                                          message:@"Legacy Gateway adresi http:// ile başlamalıdır. iOS 5'in modern HTTPS/TLS sorunu nedeniyle gateway bağlantısı özellikle HTTP olarak tasarlanmıştır."
+                                                         delegate:nil
+                                                cancelButtonTitle:@"Tamam"
+                                                otherButtonTitles:nil] autorelease];
+        [warning show];
+        return;
+    }
+
+    [[NSUserDefaults standardUserDefaults] setObject:value forKey:IP1LegacyGatewayDefaultsKey];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+
+    NSString *target = [[_pendingLegacyURL retain] autorelease];
+    [_pendingLegacyURL release];
+    _pendingLegacyURL = nil;
+    if ([target length] > 0) {
+        [self openThroughLegacyGateway:target];
+    }
+}
+
 - (BOOL)handleSuiteURL:(NSURL *)url {
     if (url == nil || ![[[url scheme] lowercaseString] isEqualToString:@"ipad1browser"]) {
         return NO;
     }
 
     NSString *host = [[url host] lowercaseString];
-    if (![host isEqualToString:@"open"]) {
-        return NO;
+    if ([host isEqualToString:@"open"]) {
+        NSString *target = [self queryValueForKey:@"url" URL:url];
+        if ([target length] == 0) {
+            return NO;
+        }
+
+        _initialPageLoaded = YES;
+        if ([self isViewLoaded]) {
+            [self loadAddressText:target];
+        } else {
+            [self view];
+            [self loadAddressText:target];
+        }
+        return YES;
     }
 
-    NSString *target = [self queryValueForKey:@"url" URL:url];
-    if ([target length] == 0) {
-        return NO;
+    if ([host isEqualToString:@"legacy"]) {
+        NSString *target = [self queryValueForKey:@"url" URL:url];
+        if ([target length] == 0) {
+            return NO;
+        }
+        [self openThroughLegacyGateway:target];
+        return YES;
     }
 
-    _initialPageLoaded = YES;
-    if ([self isViewLoaded]) {
-        [self loadAddressText:target];
-    } else {
-        [self view];
-        [self loadAddressText:target];
+    if ([host isEqualToString:@"gatewaysettings"]) {
+        [self promptForLegacyGatewayWithTarget:nil];
+        return YES;
     }
-    return YES;
+
+    return NO;
 }
 
 - (void)releaseMemoryIfPossible {
@@ -347,6 +511,7 @@ shouldStartLoadWithRequest:(NSURLRequest *)request
     _webView.delegate = nil;
     _addressField.delegate = nil;
 
+    [_pendingLegacyURL release];
     [_homeButton release];
     [_stopButton release];
     [_reloadButton release];
