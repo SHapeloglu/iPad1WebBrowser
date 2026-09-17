@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1-alpha3
+
+- Added Legacy Gateway flow for sites that fail on iOS 5.1.1 TLS/SSL.
+- Error page now offers `Legacy Gateway ile Aç` and gateway settings links.
+- Gateway address is stored locally with `NSUserDefaults`.
+- Added a Dockerized Python gateway under `gateway/`.
+- Gateway includes token authentication, SSRF protections, optional host allowlist, HTML/CSS URL rewriting and lite-mode script removal.
+- Improved address-bar behavior so local error HTML does not replace the failed URL with `about:blank`.
+
 ## 0.1-alpha2
 
 - Fixed Theos application resource packaging.
