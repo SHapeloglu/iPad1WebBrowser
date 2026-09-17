@@ -1,6 +1,6 @@
 Package: com.olap.ipad1webbrowser
 Name: iPad1WebBrowser
-Version: 0.1.0~alpha6
+Version: 0.1.0~alpha7
 Architecture: iphoneos-arm
 Description: Lightweight UIWebView browser for iPad 1 / iOS 5.1.1.
 Maintainer: SHapeloglu
