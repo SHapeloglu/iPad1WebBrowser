@@ -4,7 +4,7 @@ ARCHS := armv7
 include $(THEOS)/makefiles/common.mk
 
 APPLICATION_NAME := iPad1WebBrowser
-iPad1WebBrowser_FILES := main.m AppDelegate.m BrowserViewController.m LegacyBrowserViewController.m HistoryBrowserViewController.m
+iPad1WebBrowser_FILES := main.m AppDelegate.m BrowserViewController.m LegacyBrowserViewController.m HistoryBrowserViewController.m RetryBrowserViewController.m
 iPad1WebBrowser_FRAMEWORKS := UIKit Foundation
 iPad1WebBrowser_CFLAGS := -fno-objc-arc -Wall
 iPad1WebBrowser_RESOURCE_DIRS := Resources
