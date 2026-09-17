@@ -7,6 +7,8 @@ APPLICATION_NAME := iPad1WebBrowser
 iPad1WebBrowser_FILES := main.m AppDelegate.m BrowserViewController.m
 iPad1WebBrowser_FRAMEWORKS := UIKit Foundation
 iPad1WebBrowser_CFLAGS := -fno-objc-arc -Wall
+iPad1WebBrowser_RESOURCE_DIRS := Resources
+iPad1WebBrowser_INSTALL_PATH := /Applications
 
 include $(THEOS_MAKE_PATH)/application.mk
 
