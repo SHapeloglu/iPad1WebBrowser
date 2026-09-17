@@ -12,20 +12,20 @@
 
 ## Son doğrulanan durum
 
-Fiziksel iPad 1 / iOS 5.1.1 üzerinde alpha8 için:
+Fiziksel iPad 1 / iOS 5.1.1 üzerinde:
 
 - uygulama kuruluyor ve SpringBoard'da görünüyor
 - yerel Home ekranı açılıyor
 - `UIWebView` çalışıyor
-- NeverSSL plain HTTP sayfası açılabiliyor
-- HTTP için `Connection: close` + `Accept-Encoding: identity` yaklaşımı işe yarıyor
+- NeverSSL plain HTTP sayfası alpha9 ile açıldı
+- alpha9 testinde kullanıcıya `-1001` hata ekranı görünmeden sayfa açıldı
+- HTTP için `Connection: close` + `Accept-Encoding: identity` yaklaşımı korunuyor
 - Yer İmleri çalışıyor
 - Geçmiş çalışıyor
 - `NeverSSL - Connecting ...` gibi geçici kayıtlar alpha8 filtrelemesiyle temizlenebiliyor
 - modern HTTPS sitelerinde iOS 5.1.1 TLS sınırı devam ediyor
-- ancak NeverSSL ilk yüklemede zaman zaman `NSURLErrorTimedOut (-1001)` verebiliyor; ikinci manuel denemede açıldığı gözlendi
 
-Bu nedenle alpha8 stabil kabul edilmedi ve alpha9 hazırlandı.
+Alpha8'de NeverSSL ilk yüklemede zaman zaman `NSURLErrorTimedOut (-1001)` veriyor ve ikinci manuel denemede açılıyordu. Alpha9 bu senaryo için tek seferlik otomatik HTTP retry ekledi. Son fiziksel cihaz testinde NeverSSL başarıyla açıldı. Bu sonuç alpha9 yaklaşımıyla uyumludur; ancak retry yolunun her testte gerçekten tetiklenip tetiklenmediği kullanıcıya ayrıca gösterilmediği için birkaç tekrar test daha yapılmalıdır.
 
 ## Alpha9 değişikliği
 
@@ -65,7 +65,7 @@ Alpha8 için:
 - iOS 5.0 hedefinin deprecated olduğuna dair linker uyarısı derlemeyi engellemiyor
 - `plutil / ply / libplist-utils` bulunmaması yalnızca plist optimizasyon uyarısı oluşturuyor
 
-Alpha9 henüz fiziksel cihazda derlenip doğrulanmadı.
+Alpha9 fiziksel cihazda çalıştırıldı ve NeverSSL açıldı.
 
 ## Önemli bulgular
 
@@ -104,7 +104,7 @@ Hata kodu: -1001
 
 hatası verdi. Aynı sayfanın sonraki manuel denemede açılması, kalıcı erişim probleminden çok eski CFNetwork / bağlantı davranışına işaret etti.
 
-Alpha9 bu durum için tek seferlik otomatik retry ekler.
+Alpha9 bu durum için tek seferlik otomatik retry ekler. İlk fiziksel alpha9 testinde NeverSSL başarıyla açıldı.
 
 ### 4. HTTPS sınırı
 
@@ -132,15 +132,9 @@ Just a moment
 
 ## Son cihaz testi
 
-NeverSSL bir testte doğrudan açıldı ve Geçmiş ekranında yalnızca:
+Alpha9 ile NeverSSL açıldı. Görünür `-1001` hata ekranı oluşmadı.
 
-```text
-NeverSSL - helping you get online
-```
-
-kaydı görüldü.
-
-Daha sonraki stabilite testinde ilk NeverSSL isteği `-1001` timeout verdi. Alpha9'un bir sonraki fiziksel cihaz testi bu senaryoyu hedefliyor.
+Bir sonraki doğrulamada aynı sayfa birkaç kez açılıp yenilenerek otomatik retry mekanizmasının tekrar eden kullanımda da kararlı olduğu kontrol edilecek.
 
 ## Devam ederken
 
@@ -152,4 +146,4 @@ Yeni bir oturumda önce şu dosyaları oku:
 4. `BACKLOG.md`
 5. `CHANGELOG.md`
 
-Ardından alpha9 paketini derleyip fiziksel cihazdaki otomatik retry davranışını test et.
+Ardından alpha9 fiziksel cihaz stabilite testlerinden devam et.
