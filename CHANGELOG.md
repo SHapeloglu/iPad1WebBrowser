@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1-alpha8
+
+- Added transient-page filtering for history entries.
+- Titles containing patterns such as `Connecting`, `Redirecting`, `Loading`, `Please wait` and `Just a moment` are no longer saved to history.
+- Added Turkish equivalents for common temporary-page titles.
+- Existing transient entries left by alpha7 are cleaned automatically when the controller loads.
+- Final settled pages continue to be stored with the existing delayed commit logic.
+- Kept alpha6 bookmarks and alpha5 HTTP compatibility behavior unchanged.
+
 ## 0.1-alpha7
 
 - Added redirect-aware history recording.
