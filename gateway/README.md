@@ -21,14 +21,13 @@ Servis:
 ```bash
 git clone https://github.com/SHapeloglu/iPad1WebBrowser.git
 cd iPad1WebBrowser/gateway
-
+cp .env.example .env
 TOKEN=$(openssl rand -hex 24)
+sed -i "s/^GATEWAY_TOKEN=.*/GATEWAY_TOKEN=$TOKEN/" .env
 echo "$TOKEN"
 ```
 
-`docker-compose.yml` içindeki `GATEWAY_TOKEN` değerini üretilen token ile değiştirin.
-
-Sonra:
+Ardından:
 
 ```bash
 docker compose up -d --build
@@ -52,16 +51,16 @@ Varsayılan:
 bidanismanlik.com,www.bidanismanlik.com
 ```
 
-Başka bir site veya CDN gerekiyorsa `ALLOWED_HOSTS` listesine eklenebilir:
+Başka bir site veya CDN gerekiyorsa `.env` içindeki `ALLOWED_HOSTS` listesine eklenebilir:
 
-```yaml
-ALLOWED_HOSTS: "bidanismanlik.com,www.bidanismanlik.com,cdn.example.com"
+```text
+ALLOWED_HOSTS=bidanismanlik.com,www.bidanismanlik.com,cdn.example.com
 ```
 
 Tüm public hostlara izin vermek teknik olarak mümkündür:
 
-```yaml
-ALLOWED_HOSTS: "*"
+```text
+ALLOWED_HOSTS=*
 ```
 
 Ancak bu mod yalnızca güçlü token ve ek ağ/firewall kontrolleriyle kullanılmalıdır.
