@@ -2,12 +2,14 @@
 
 static NSString * const IP1UserAgentModeDefaultsKey = @"IP1UserAgentMode";
 static NSString * const IP1LegacyGatewayDefaultsKeyAlpha4 = @"IP1LegacyGatewayBaseURL";
+static NSString * const IP1LegacyCompatHeader = @"X-iPad1-Legacy-Compat";
 
 @interface LegacyBrowserViewController ()
 - (void)loadHome;
 - (void)showDiagnostics;
 - (void)captureDiagnosticsForWebView:(UIWebView *)webView;
 - (void)setUserAgentMode:(NSString *)mode;
+- (void)rememberRequestedURL:(NSURL *)url;
 @end
 
 @implementation LegacyBrowserViewController
@@ -49,6 +51,7 @@ static NSString * const IP1LegacyGatewayDefaultsKeyAlpha4 = @"IP1LegacyGatewayBa
          "<hr/>"
          "<p><b>User-Agent:</b> %@</p>"
          "<p><b>Legacy Gateway:</b> %@</p>"
+         "<p><b>HTTP uyumluluk:</b> Connection: close + identity</p>"
          "<p><a href='ipad1browser://debug'>Son sayfanın debug bilgisini göster</a></p>"
          "<p><a href='ipad1browser://setUA?mode=system'>Sistem / iPad User-Agent kullan</a><br/>"
          "<a href='ipad1browser://setUA?mode=desktop'>Masaüstü Safari User-Agent kullan</a></p>"
@@ -59,6 +62,51 @@ static NSString * const IP1LegacyGatewayDefaultsKeyAlpha4 = @"IP1LegacyGatewayBa
          "</body></html>", uaLabel, gatewayState];
 
     [_webView loadHTMLString:html baseURL:nil];
+}
+
+- (void)rememberRequestedURL:(NSURL *)url {
+    if (url == nil) {
+        return;
+    }
+
+    NSString *scheme = [[url scheme] lowercaseString];
+    if (!([scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"])) {
+        return;
+    }
+
+    [_requestedURL release];
+    _requestedURL = [[url absoluteString] copy];
+}
+
+- (BOOL)webView:(UIWebView *)webView
+shouldStartLoadWithRequest:(NSURLRequest *)request
+ navigationType:(UIWebViewNavigationType)navigationType {
+    BOOL allowedByBase = [super webView:webView
+                    shouldStartLoadWithRequest:request
+                               navigationType:navigationType];
+    if (!allowedByBase) {
+        return NO;
+    }
+
+    NSURL *url = [request URL];
+    [self rememberRequestedURL:url];
+
+    NSString *scheme = [[url scheme] lowercaseString];
+    if ([scheme isEqualToString:@"http"] &&
+        ![[request valueForHTTPHeaderField:IP1LegacyCompatHeader] isEqualToString:@"1"]) {
+
+        NSMutableURLRequest *legacyRequest = [[request mutableCopy] autorelease];
+        [legacyRequest setValue:@"1" forHTTPHeaderField:IP1LegacyCompatHeader];
+        [legacyRequest setValue:@"close" forHTTPHeaderField:@"Connection"];
+        [legacyRequest setValue:@"identity" forHTTPHeaderField:@"Accept-Encoding"];
+        [legacyRequest setCachePolicy:NSURLRequestReloadIgnoringLocalCacheData];
+        [legacyRequest setTimeoutInterval:30.0];
+
+        [_webView loadRequest:legacyRequest];
+        return NO;
+    }
+
+    return YES;
 }
 
 - (void)captureDiagnosticsForWebView:(UIWebView *)webView {
@@ -79,27 +127,60 @@ static NSString * const IP1LegacyGatewayDefaultsKeyAlpha4 = @"IP1LegacyGatewayBa
 
     _lastDiagnosticHTMLLength = [htmlLength integerValue];
     _lastDiagnosticBodyLength = [bodyLength integerValue];
+    _lastLoadingState = [webView isLoading];
+}
+
+- (void)webViewDidStartLoad:(UIWebView *)webView {
+    [super webViewDidStartLoad:webView];
+    _lastLoadingState = YES;
 }
 
 - (void)webViewDidFinishLoad:(UIWebView *)webView {
     [super webViewDidFinishLoad:webView];
     [self captureDiagnosticsForWebView:webView];
+
+    NSURL *url = [[webView request] URL];
+    NSString *scheme = [[url scheme] lowercaseString];
+    if ([scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"]) {
+        [_lastSuccessfulURL release];
+        _lastSuccessfulURL = [[url absoluteString] copy];
+        [_lastLoadError release];
+        _lastLoadError = nil;
+    }
+}
+
+- (void)webView:(UIWebView *)webView didFailLoadWithError:(NSError *)error {
+    _lastLoadingState = [webView isLoading];
+
+    [_lastLoadError release];
+    _lastLoadError = [[NSString stringWithFormat:@"%@ (kod: %ld)",
+                       [error localizedDescription],
+                       (long)[error code]] copy];
+
+    [super webView:webView didFailLoadWithError:error];
 }
 
 - (void)showDiagnostics {
     [self captureDiagnosticsForWebView:_webView];
 
-    NSString *url = ([_lastDiagnosticURL length] > 0) ? _lastDiagnosticURL : @"(yok)";
+    NSString *requested = ([_requestedURL length] > 0) ? _requestedURL : @"(yok)";
+    NSString *current = ([_lastDiagnosticURL length] > 0) ? _lastDiagnosticURL : @"(yok)";
     NSString *title = ([_lastDiagnosticTitle length] > 0) ? _lastDiagnosticTitle : @"(boş)";
+    NSString *success = ([_lastSuccessfulURL length] > 0) ? _lastSuccessfulURL : @"(yok)";
+    NSString *lastError = ([_lastLoadError length] > 0) ? _lastLoadError : @"(yok)";
     NSString *ua = ([_lastDiagnosticUserAgent length] > 0) ? _lastDiagnosticUserAgent : @"(alınamadı)";
 
-    if ([ua length] > 280) {
-        ua = [ua substringToIndex:280];
+    if ([ua length] > 240) {
+        ua = [ua substringToIndex:240];
     }
 
     NSString *message = [NSString stringWithFormat:
-        @"URL: %@\n\nTitle: %@\n\nHTML: %ld karakter\nBody: %ld karakter\n\nUser-Agent:\n%@",
-        url,
+        @"Requested URL:\n%@\n\nCurrent URL:\n%@\n\nLoading: %@\nLast success:\n%@\n\nLast error:\n%@\n\nTitle: %@\nHTML: %ld\nBody: %ld\n\nUser-Agent:\n%@",
+        requested,
+        current,
+        [ _webView isLoading] ? @"YES" : @"NO",
+        success,
+        lastError,
         title,
         (long)_lastDiagnosticHTMLLength,
         (long)_lastDiagnosticBodyLength,
@@ -168,6 +249,9 @@ static NSString * const IP1LegacyGatewayDefaultsKeyAlpha4 = @"IP1LegacyGatewayBa
 }
 
 - (void)dealloc {
+    [_requestedURL release];
+    [_lastSuccessfulURL release];
+    [_lastLoadError release];
     [_lastDiagnosticURL release];
     [_lastDiagnosticTitle release];
     [_lastDiagnosticUserAgent release];
