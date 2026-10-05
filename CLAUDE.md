@@ -1,55 +1,28 @@
-# CLAUDE.md
+# CLAUDE.md — iPad1WebBrowser
 
-Bu dosya, bu proje üzerinde çalışırken Claude'un (Claude Code dahil) izlemesi gereken bağlamı ve kuralları içerir.
-
-## Proje
-
-**iPad1WebBrowser** — Hafif web tarayıcı: **iPad 1 / iOS 5.1.1 / armv7 / non-ARC / Theos**.
+**iPad 1 / iOS 5.1.1 / armv7 / ~256 MB RAM** için hafif `UIWebView` tabanlı web tarayıcı (Objective-C, **MRC/non-ARC**, Theos, iPhoneOS 6.1 SDK). Adres/arama, geri-ileri, yenile/durdur, Home, geçmiş, yer imleri, otomatik tek seferlik retry, harici scheme devri (`mailto:`, `tel:`), doğrudan dosya URL'lerinde iPad1Downloader'a devir ve modern TLS siteleri için **Legacy Gateway**. Paket `com.olap.ipad1webbrowser` **0.1.0~alpha9** (`control`).
 
 - GitHub: https://github.com/SHapeloglu/iPad1WebBrowser
+- Önce oku: `README.md` (platform sözleşmesi, uygulama sınırı) → `ARCHITECTURE.md` → `TASK.md` (aktif hedef: Alpha9 test listesi) → `SESSION.md` → `CHANGELOG.md`.
 
-## Teknoloji Yığını
+## Yapı
 
-- Flask
-- Gunicorn
-- requests
-- Objective-C / UIKit (iOS, Theos ile derleniyor)
-- Docker / docker compose
+`AppDelegate` → `RetryBrowserViewController` → `HistoryBrowserViewController` → `LegacyBrowserViewController` → `BrowserViewController` (miras zinciri; her katman bir sorumluluk ekler: otomatik retry, geçmiş/yer imi, legacy gateway, temel tarayıcı). Suite çağrısı: `ipad1browser://open?url=<encoded-url>`.
 
-## Önemli Dosyalar
+`gateway/` — Docker'da çalışan Flask proxy (`app.py`, port 8091): token doğrulama (`GATEWAY_TOKEN`), private/loopback hedef engeli, host allowlist (`ALLOWED_HOSTS`), sunucu tarafında modern HTTPS, HTML/CSS bağlantı yeniden yazımı, `LITE_MODE=1` ile JS kaldırma, 15 MB yanıt sınırı. Bu sunucuda çalışmıyor; Contabo'ya kurulacaksa 8091 portu `musiki-evo-laravel` tarafından kullanılıyor — `GATEWAY_PORT` değiştirilmeli.
 
-- `AppDelegate.m`
-- `Makefile`
-- `Resources/Info.plist`
-- `gateway/Dockerfile`
-- `gateway/app.py`
-- `gateway/docker-compose.yml`
-- `gateway/requirements.txt`
-- `main.m`
-
-Mimari ayrıntılar için bkz. `ARCHITECTURE.md`.
-
-## Sık Kullanılan Komutlar
+## Derleme ve Kurulum
 
 ```bash
-make after-install
-docker compose up -d --build
-docker compose logs -f
+make clean && make package FINALPACKAGE=1        # packages/com.olap.ipad1webbrowser_<VER>_iphoneos-arm.deb
+scp -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa packages/*.deb root@<ipad-ip>:/var/mobile/
+# iPad'de: dpkg -i … && su mobile -c 'HOME=/var/mobile /usr/bin/uicache' && killall SpringBoard
 ```
 
 ## Kurallar
 
-- Gizli anahtar, DB bağlantısı vb. yapılandırmayı ortam değişkenlerinden / `.env`den oku; koda gömme.
-- Route içinde iş mantığını büyütme; yardımcı modüllere/servislere ayır.
-- `.env`, parola, token ve API anahtarlarını asla commit etme.
-- Her çalışma oturumunun sonunda `session.md`ye kısa kayıt düş; görev durumunu `task.md`de güncelle.
-- Önceliklendirilmemiş fikirleri `backlog.md`ye yaz; somutlaşınca `task.md`ye taşı.
-
-## Çalışma Dosyaları
-
-| Dosya | Amaç |
-|---|---|
-| `ARCHITECTURE.md` | Mimari ve dizin yapısı referansı |
-| `TASK.md` | Aktif / devam eden / tamamlanan görevler |
-| `BACKLOG.md` | Önceliklendirilmemiş fikir ve teknik borç havuzu |
-| `SESSION.md` | Oturum günlüğü — her oturum sonunda güncellenir |
+- `WKWebView`, ARC ve iOS 5'te olmayan API'ler kullanılmaz; düşük bellek uyarısında URL cache temizlenir.
+- Uygulama sınırı: dosya transferi → iPad1Downloader, dosya yönetimi/ZIP → iPad1Files, PDF → iPad1PDFReader. Tarayıcıya indirme yöneticisi ekleme.
+- **Gateway `http://` üzerinden çalışır:** giriş, parola, ödeme, kişisel veri için kullanılmamalı; sadece herkese açık okuma sayfaları. Token ve allowlist'i gevşetme (`ALLOW_INSECURE_NO_TOKEN` yalnız yerel test).
+- Retry tek seferlik olmalı (sonsuz döngü yok); geçmişe yalnız nihai URL/başlık yazılır.
+- Fiziksel cihaz testi esastır; sonucu `TASK.md` "Son test sonucu" ve `SESSION.md`'ye yaz.
